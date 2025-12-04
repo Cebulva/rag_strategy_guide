@@ -1,2 +1,5 @@
 /local_storage
 .env
+.DS_Store
+evaluation/evaluation_results/.DS_Store
+evaluation/.DS_Store

@@ -4,7 +4,8 @@ from llama_index.core import (
     VectorStoreIndex,
     load_index_from_storage,
 )
-from llama_index.core.chat_engine.types import BaseChatEngine
+#from llama_index.core.chat_engine.types import BaseChatEngine
+from llama_index.core.chat_engine.types import CondensePlusContextChatEngine
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import Document
@@ -37,7 +38,7 @@ def _create_new_vector_store(
         "Creating new vector store from all files in the 'data' directory..."
     )
 
-    # This reads all the text files in the specified directory.
+    # 1. Read all the text files in the specified directory.
     documents: list[Document] = SimpleDirectoryReader(
         input_dir=DATA_PATH
     ).load_data()
@@ -47,7 +48,7 @@ def _create_new_vector_store(
             f"No documents found in {DATA_PATH}. Cannot create vector store."
         )
 
-    # This breaks the long document into smaller, more manageable chunks.
+    # 2. Instantiate the SentenceSplitter
     text_splitter: SentenceSplitter = SentenceSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP
@@ -93,7 +94,7 @@ def get_vector_store(embed_model: HuggingFaceEmbedding) -> VectorStoreIndex:
 def get_chat_engine(
         llm: GoogleGenAI,
         embed_model: HuggingFaceEmbedding
-) -> BaseChatEngine:
+) -> CondensePlusContextChatEngine:
     """Initialises and returns the main conversational RAG chat engine."""
     vector_index: VectorStoreIndex = get_vector_store(embed_model)
     memory: ChatMemoryBuffer = ChatMemoryBuffer.from_defaults(
@@ -101,11 +102,19 @@ def get_chat_engine(
     )
 
     # Assemble the RAG chat engine
-    chat_engine: BaseChatEngine = vector_index.as_chat_engine(
-        memory=memory,
+    retriever = vector_index.as_retriever(similarity_top_k=SIMILARITY_TOP_K)
+
+    reranker: SentenceTransformerRerank = SentenceTransformerRerank( # <--- import this from llama_index.core.postprocessor
+        top_n=RERANKER_TOP_N,          # <--- add this to config.py and import into engine.py
+        model=RERANKER_MODEL_NAME      # <--- add this to config.py and import into engine.py
+    )
+
+    chat_engine: CondensePlusContextChatEngine = CondensePlusContextChatEngine( # <--- import this from llama_index.core.chat_engine
+        retriever=retriever,
         llm=llm,
+        memory=memory,
         system_prompt=LLM_SYSTEM_PROMPT,
-        similarity_top_k=SIMILARITY_TOP_K,
+        node_postprocessors=[reranker]
     )
     return chat_engine
 
@@ -115,7 +124,7 @@ def main_chat_loop() -> None:
     llm = initialise_llm()
     embed_model: HuggingFaceEmbedding = get_embedding_model()
 
-    chat_engine: BaseChatEngine = get_chat_engine(
+    chat_engine: CondensePlusContextChatEngine = get_chat_engine(
         llm=llm,
         embed_model=embed_model
     )

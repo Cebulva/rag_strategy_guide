@@ -105,15 +105,15 @@ def generate_qa_dataset(
 
         # If you are hitting API rate limits
         # You can slow down the rate with time.sleep
-        #
-        # if question_index + 1 < len(questions):
-        #     print(
-        #         f"Taking a {SLEEP_PER_QUESTION} second breather "
-        #         "to keep the API happy 🐢"
-        #     )
-        #     time.sleep(SLEEP_PER_QUESTION)
-        # else:
-        #     continue
+        
+        if question_index + 1 < len(questions):
+            print(
+                f"Taking a {SLEEP_PER_QUESTION} second breather "
+                "to keep the API happy 🐢"
+            )
+            time.sleep(SLEEP_PER_QUESTION)
+        else:
+            continue
 
     response_data: dict[str, list[Any]] = {
         "question": questions,

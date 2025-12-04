@@ -6,7 +6,7 @@ EVALUATION_DATA: list[dict[str, str]] = [
                         "like I am Sirrus. The son of whom Atrus spoke? "
     },
     {
-        "question": "What is inside of The Dock Forechamber and how can I interact with the object inside of it?",
+        "question": "What is inside of The Dock Forechamber?",
         "ground_truth": """
                         The Dock Forechamber contains a device called the Dimensional Imager.
 
