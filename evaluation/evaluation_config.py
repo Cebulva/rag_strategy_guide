@@ -30,8 +30,8 @@ EVALUATION_METRICS: list[Metric] = [
 ]
 
 # --- Sleep Timers for API Limits ---
-SLEEP_PER_EVALUATION: int = 40
-SLEEP_PER_QUESTION: int = 40
+SLEEP_PER_EVALUATION: int = 45
+SLEEP_PER_QUESTION: int = 45
 
 # --- Configuration for Chunking Strategy Evaluation ---
 CHUNKING_STRATEGY_CONFIGS: list[dict[str, int]] = [
@@ -39,6 +39,8 @@ CHUNKING_STRATEGY_CONFIGS: list[dict[str, int]] = [
     {'size': 256, 'overlap': 38},
     {'size': 512, 'overlap': 80},
 ]
+
+BEST_CHUNKING_STRATEGY: dict[str, int] = {'size': 256, 'overlap': 38}
 
 # --- Cross-encoder Model for Reranking ---
 RERANKER_MODEL_NAME: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
@@ -50,3 +52,8 @@ RERANKER_CONFIGS: list[dict[str, int]] = [
     {'retriever_k': 20, 'reranker_n': 5},
     {'retriever_k': 20, 'reranker_n': 8},
 ]
+
+# --- Query Rewrite Evaluation ---
+# The 'best' reranker strategy found in the previous evaluation stage.
+# IMPORTANT: You must update this with the values you found to be optimal.
+BEST_RERANKER_STRATEGY: dict[str, int] = {'retriever_k': 20, 'reranker_n': 6}

@@ -1,7 +1,8 @@
 from evaluation.evaluation_engine import (
     # evaluate_baseline,
     # evaluate_chunking_strategies,
-    evaluate_reranker_strategies,
+    # evaluate_reranker_strategies,
+    evaluate_query_rewriting,
 )
 
 
@@ -14,4 +15,7 @@ if __name__ == "__main__":
     #evaluate_chunking_strategies()
 
     # Run Stage 3: Reranker Strategy Eva# --- Main execution block ---
-    evaluate_reranker_strategies()
+    # evaluate_reranker_strategies()
+
+    # Run Stage 4: Query Rewriter Evaluation
+    evaluate_query_rewriting()

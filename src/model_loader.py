@@ -8,6 +8,7 @@ from src.config import (
     EMBEDDING_MODEL_NAME,
     EMBEDDING_CACHE_PATH,
     LLM_MODEL,
+    LLM_SMALL_MODEL,
     # LLM_MAX_NEW_TOKENS,
     # LLM_TEMPERATURE,
     # LLM_TOP_P,
@@ -30,6 +31,26 @@ def initialise_llm() -> GoogleGenAI:
     return GoogleGenAI(
         api_key=api_key,
         model=LLM_MODEL,
+        # The following parameters are optional
+        # and will default to the model's defaults if not set
+        # max_new_tokens=LLM_MAX_NEW_TOKENS,
+        # temperature=LLM_TEMPERATURE,
+        # top_p=LLM_TOP_P,
+    )
+
+def initialise_hyde_llm() -> GoogleGenAI:
+    """Initialises the GoogleGenAI LLM with core parameters from config."""
+
+    api_key: str | None = os.getenv("GOOGLE_API_KEY")
+
+    if not api_key:
+        raise ValueError(
+            "GOOGLE_API_KEY not found. Make sure it's set in your .env file."
+        )
+
+    return GoogleGenAI(
+        api_key=api_key,
+        model=LLM_SMALL_MODEL,
         # The following parameters are optional
         # and will default to the model's defaults if not set
         # max_new_tokens=LLM_MAX_NEW_TOKENS,

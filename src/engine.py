@@ -4,16 +4,20 @@ from llama_index.core import (
     VectorStoreIndex,
     load_index_from_storage,
 )
-#from llama_index.core.chat_engine.types import BaseChatEngine
-from llama_index.core.chat_engine.types import CondensePlusContextChatEngine
-from llama_index.core.memory import ChatMemoryBuffer
+#from llama_index.core
+from llama_index.core.chat_engine.condense_plus_context import CondensePlusContextChatEngine
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import Document
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.core.retrievers import TransformRetriever
+from llama_index.core.base.base_retriever import BaseRetriever
+from llama_index.core.indices.query.query_transform import HyDEQueryTransform
+from llama_index.core.postprocessor import SentenceTransformerRerank
+from llama_index.core.memory import Memory
+
+#from llama_index.core.llms
 from llama_index.llms.google_genai import GoogleGenAI
 
-#from llama_index.core.llms import CompletionResponse
-from llama_index.core.chat_engine import SimpleChatEngine
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 from src.config import (
     CHUNK_OVERLAP,
@@ -23,11 +27,14 @@ from src.config import (
     SIMILARITY_TOP_K,
     VECTOR_STORE_PATH,
     CHAT_MEMORY_TOKEN_LIMIT,
+    RERANKER_MODEL_NAME,
+    RERANKER_TOP_N
 )
 
 from src.model_loader import (
     get_embedding_model,
-    initialise_llm
+    initialise_llm,
+    initialise_hyde_llm
 )
 
 def _create_new_vector_store(
@@ -96,21 +103,38 @@ def get_chat_engine(
         embed_model: HuggingFaceEmbedding
 ) -> CondensePlusContextChatEngine:
     """Initialises and returns the main conversational RAG chat engine."""
+    # Access index (vector database)
     vector_index: VectorStoreIndex = get_vector_store(embed_model)
-    memory: ChatMemoryBuffer = ChatMemoryBuffer.from_defaults(
+
+    # Set up chunk retriever
+    base_retriever: BaseRetriever = vector_index.as_retriever(similarity_top_k=SIMILARITY_TOP_K)
+
+    # Set up HyDE system
+    hyde: HyDEQueryTransform = HyDEQueryTransform(
+        include_original=True, 
+        llm=initialise_hyde_llm()
+    )
+
+    # Combine HyDE with retriever
+    hyde_retriever: TransformRetriever = TransformRetriever(
+        retriever=base_retriever, 
+        query_transform=hyde
+    )
+
+    # Set up chunk reranker
+    reranker: SentenceTransformerRerank = SentenceTransformerRerank( 
+        top_n=RERANKER_TOP_N, 
+        model=RERANKER_MODEL_NAME
+    )
+
+    # Set up chat memory (summary memory condenses chat history)
+    memory: Memory = Memory.from_defaults(
         token_limit=CHAT_MEMORY_TOKEN_LIMIT
     )
 
-    # Assemble the RAG chat engine
-    retriever = vector_index.as_retriever(similarity_top_k=SIMILARITY_TOP_K)
-
-    reranker: SentenceTransformerRerank = SentenceTransformerRerank( # <--- import this from llama_index.core.postprocessor
-        top_n=RERANKER_TOP_N,          # <--- add this to config.py and import into engine.py
-        model=RERANKER_MODEL_NAME      # <--- add this to config.py and import into engine.py
-    )
-
-    chat_engine: CondensePlusContextChatEngine = CondensePlusContextChatEngine( # <--- import this from llama_index.core.chat_engine
-        retriever=retriever,
+    # Set up chat engine with memory, retriever, and reranker
+    chat_engine: CondensePlusContextChatEngine = CondensePlusContextChatEngine( 
+        retriever=hyde_retriever,
         llm=llm,
         memory=memory,
         system_prompt=LLM_SYSTEM_PROMPT,

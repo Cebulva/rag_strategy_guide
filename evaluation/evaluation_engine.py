@@ -31,15 +31,19 @@ from src.config import (
 from src.model_loader import get_embedding_model, initialise_llm
 
 # Add to existing llama-index.core imports
-from llama_index.core.query_engine import RetrieverQueryEngine # <-- Add this line
-from llama_index.core.postprocessor import SentenceTransformerRerank # <-- Add this line
+from llama_index.core.query_engine import RetrieverQueryEngine
+from llama_index.core.postprocessor import SentenceTransformerRerank
+from llama_index.core.query_engine import TransformQueryEngine
+from llama_index.core.indices.query.query_transform import HyDEQueryTransform
 
 # Add the new configs to the import from evaluation.evaluation_config
 from evaluation.evaluation_config import (
     # ... existing imports
     CHUNKING_STRATEGY_CONFIGS,
-    RERANKER_MODEL_NAME, # <-- Add this line
-    RERANKER_CONFIGS, # <-- Add this line
+    RERANKER_MODEL_NAME,
+    RERANKER_CONFIGS,
+    BEST_CHUNKING_STRATEGY,
+    BEST_RERANKER_STRATEGY,
 )
 
 """
@@ -248,3 +252,97 @@ def evaluate_reranker_strategies() -> None:
     save_results(final_df, "reranker_evaluation")
 
     print("--- ✅ Reranker Strategy Evaluation Complete ---")
+
+def evaluate_query_rewriting() -> None:
+    """ Evaluates the impact of HyDE on top of the best RAG configuration. """
+    print("\n--- 🚀 Stage 4: Evaluating Query Rewriting (HyDE) ---")
+
+    llm_to_test: GoogleGenAI = initialise_llm()
+
+    embed_model_to_test: HuggingFaceEmbedding = get_embedding_model()
+
+    questions, ground_truths = get_evaluation_data()
+
+    # Use the best configurations from the config file
+    best_retriever_k: int = BEST_RERANKER_STRATEGY['retriever_k']
+    best_reranker_n: int = BEST_RERANKER_STRATEGY['reranker_n']
+
+    index: VectorStoreIndex = get_or_build_index(
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
+        embed_model=embed_model_to_test
+    )
+
+    ragas_llm: LlamaIndexLLMWrapper
+    ragas_embeddings: HuggingFaceEmbeddings
+    ragas_llm, ragas_embeddings = load_ragas_models()
+
+    all_results: list[pd.DataFrame] = []
+
+    # Test with and without HyDE
+    for use_hyde in [False, True]:
+        print(f"\n--- Testing Query Rewrite Config: use_hyde={use_hyde} ---")
+
+        # Build the base query engine with retriever and reranker
+        retriever = index.as_retriever(
+            similarity_top_k=best_retriever_k
+        )
+
+        reranker = SentenceTransformerRerank(
+            top_n=best_reranker_n,
+            model=RERANKER_MODEL_NAME
+        )
+
+        base_query_engine = RetrieverQueryEngine.from_args(
+            retriever=retriever,
+            node_postprocessors=[reranker],
+            llm=llm_to_test
+        )
+
+        if use_hyde:
+            hyde_transform = HyDEQueryTransform(
+                llm=llm_to_test,
+                include_original=True
+            )
+            query_engine = TransformQueryEngine(
+                base_query_engine,
+                query_transform=hyde_transform
+            )
+        else:
+            # When not using HyDE, the engine is just the base engine
+            query_engine = base_query_engine
+
+        qa_dataset: Dataset = generate_qa_dataset(
+            query_engine,
+            questions,
+            ground_truths
+        )
+
+        print("--- Running Ragas evaluation for query rewriting... ---")
+
+        # --- If you don't have a Rate per Minute limit on your API ---
+        # results_df: pd.DataFrame = evaluate_without_rate_limit(
+        #     qa_dataset,
+        #     ragas_llm,
+        #     ragas_embeddings,
+        # )
+
+        # --- If you do have a Rate per Minute API limit ---
+        results_df: pd.DataFrame = evaluate_with_rate_limit(
+            qa_dataset,
+            ragas_llm,
+            ragas_embeddings,
+        )
+
+        results_df['chunk_size'] = BEST_CHUNKING_STRATEGY['size']
+        results_df['chunk_overlap'] = BEST_CHUNKING_STRATEGY['overlap']
+        results_df['retriever_k'] = best_retriever_k
+        results_df['reranker_n'] = best_reranker_n
+        results_df['use_hyde'] = use_hyde
+        all_results.append(results_df)
+
+    final_df: pd.DataFrame = pd.concat(all_results, ignore_index=True)
+
+    save_results(final_df, "query_rewrite_evaluation")
+
+    print("--- ✅ Query Rewrite Evaluation Complete ---")
