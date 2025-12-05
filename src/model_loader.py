@@ -9,6 +9,7 @@ from src.config import (
     EMBEDDING_CACHE_PATH,
     LLM_MODEL,
     LLM_SMALL_MODEL,
+    SEMANTIC_SPLITTER_EMBEDDING_MODEL_NAME,
     # LLM_MAX_NEW_TOKENS,
     # LLM_TEMPERATURE,
     # LLM_TOP_P,
@@ -39,7 +40,7 @@ def initialise_llm() -> GoogleGenAI:
     )
 
 def initialise_hyde_llm() -> GoogleGenAI:
-    """Initialises the GoogleGenAI LLM with core parameters from config."""
+    """Initialises the GoogleGenAI LLM using hyde with core parameters from config."""
 
     api_key: str | None = os.getenv("GOOGLE_API_KEY")
 
@@ -65,5 +66,16 @@ def get_embedding_model() -> HuggingFaceEmbedding:
 
     return HuggingFaceEmbedding(
         model_name=EMBEDDING_MODEL_NAME,
+        cache_folder=EMBEDDING_CACHE_PATH.as_posix()
+    )
+
+def get_splitter_embedding_model() -> HuggingFaceEmbedding:
+    """Initialises and returns the HuggingFace embedding model for sentence embedding"""
+    
+    # Create the cache directory if it doesn't exist
+    EMBEDDING_CACHE_PATH.mkdir(parents=True, exist_ok=True)
+
+    return HuggingFaceEmbedding(
+        model_name=SEMANTIC_SPLITTER_EMBEDDING_MODEL_NAME,
         cache_folder=EMBEDDING_CACHE_PATH.as_posix()
     )

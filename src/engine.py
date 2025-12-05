@@ -6,7 +6,7 @@ from llama_index.core import (
 )
 #from llama_index.core
 from llama_index.core.chat_engine.condense_plus_context import CondensePlusContextChatEngine
-from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.node_parser import SentenceSplitter, SemanticSplitterNodeParser
 from llama_index.core.schema import Document
 from llama_index.core.retrievers import TransformRetriever
 from llama_index.core.base.base_retriever import BaseRetriever
@@ -28,13 +28,16 @@ from src.config import (
     VECTOR_STORE_PATH,
     CHAT_MEMORY_TOKEN_LIMIT,
     RERANKER_MODEL_NAME,
-    RERANKER_TOP_N
+    RERANKER_TOP_N,
+    BUFFER_SIZE,
+    BREAKPOINT_PERCENTILE_THRESHOLD
 )
 
 from src.model_loader import (
     get_embedding_model,
     initialise_llm,
-    initialise_hyde_llm
+    initialise_hyde_llm,
+    get_splitter_embedding_model
 )
 
 def _create_new_vector_store(
@@ -55,17 +58,35 @@ def _create_new_vector_store(
             f"No documents found in {DATA_PATH}. Cannot create vector store."
         )
 
-    # 2. Instantiate the SentenceSplitter
-    text_splitter: SentenceSplitter = SentenceSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP
+    # # 2. Instantiate the SentenceSplitter
+    # text_splitter: SentenceSplitter = SentenceSplitter(
+    #     chunk_size=CHUNK_SIZE,
+    #     chunk_overlap=CHUNK_OVERLAP
+    # )
+
+    # Instantiate the Semantic SentenceSplitter
+    semantic_splitter_embedding_model = get_splitter_embedding_model()
+
+    # This breaks the documents into chunks wherever there is a semantic shift between sentences
+    semantic_splitter: SemanticSplitterNodeParser = SemanticSplitterNodeParser(
+        buffer_size=BUFFER_SIZE,
+        breakpoint_percentile_threshold=BREAKPOINT_PERCENTILE_THRESHOLD,
+        embed_model=semantic_splitter_embedding_model
     )
+
+    # # This is the core of the vector store. It takes the text chunks,
+    # # uses the embedding model to convert them to vectors, and stores them.
+    # index: VectorStoreIndex = VectorStoreIndex.from_documents(
+    #     documents,
+    #     transformations=[text_splitter],
+    #     embed_model=embed_model
+    # )
 
     # This is the core of the vector store. It takes the text chunks,
     # uses the embedding model to convert them to vectors, and stores them.
     index: VectorStoreIndex = VectorStoreIndex.from_documents(
         documents,
-        transformations=[text_splitter],
+        transformations=[semantic_splitter],
         embed_model=embed_model
     )
 
