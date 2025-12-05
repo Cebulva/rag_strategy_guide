@@ -24,10 +24,10 @@ LLM_SYSTEM_PROMPT: str = (
 
 # --- Embedding Model Configuration ---
 EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
-SEMANTIC_SPLITTER_EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+# SEMANTIC_SPLITTER_EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
 
-BUFFER_SIZE: int = 1
-BREAKPOINT_PERCENTILE_THRESHOLD: int = 90
+# BUFFER_SIZE: int = 1
+# BREAKPOINT_PERCENTILE_THRESHOLD: int = 90
 
 # --- RAG/VectorStore Configuration ---
 # The number of most relevant text chunks to retrieve from the vector store
