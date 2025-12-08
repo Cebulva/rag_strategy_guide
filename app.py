@@ -7,7 +7,6 @@ from llama_index.core.chat_engine import CondensePlusContextChatEngine
 from src.model_loader import get_embedding_model, initialise_llm
 from src.engine import get_chat_engine
 
-
 # ------ BOT INITIALISATION ------ #
 
 @st.cache_resource #bot must be cached
@@ -24,8 +23,12 @@ bot: CondensePlusContextChatEngine = initialise_bot()
 
 # ------ STREAMLIT INTERFACE ------ #
 
-st.title("Alice Expert")
+st.title("Myst - Strategy Guide Chat Bot")
 
+# --- AUDIO PLAYER --- #
+
+with st.sidebar:
+    st.audio("https://lambda.vgmtreasurechest.com/soundtracks/myst-original-soundtrack/eaouhcni/01.%20Myst%20Theme.mp3", format="audio/mpeg", loop=True, autoplay=True)
 
 # --- Displaying Chat History ---
 # Initialise chat history if not already existing
@@ -40,7 +43,7 @@ for message in st.session_state.messages:
 
 # --- CHATBOT ---
 # React to user input
-if user_message := st.chat_input("Say hello!"):
+if user_message := st.chat_input("Ask about a location or puzzle."):
     
     # Display user message in chat message container
     with st.chat_message("user"):
@@ -52,7 +55,7 @@ if user_message := st.chat_input("Say hello!"):
     with st.chat_message("assistant"):
 
         # Have the spinner only for the retrieval
-        with st.spinner("Please wait while the bot searches the book for sources..."):
+        with st.spinner("Please wait while the bot searches through the documents..."):
 
             # .stream_chat() make it print bit by bit instead of waiting for the full block
             streaming_response = bot.stream_chat(user_message)
