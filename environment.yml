@@ -16,6 +16,7 @@ dependencies:
   - sentence-transformers
   - ragas
   - pip
+  - streamlit
 
 # === Pip Packages ===
   - pip:
