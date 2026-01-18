@@ -26,3 +26,6 @@ The rag_strategy_guide repository documents a complete case study in Retrieval-A
 - Semantic Search: Using vector math to find information based on meaning rather than keywords.
 
 - Stateful Memory: Managing chat history (Buffering/Condense-Question) to allow for multi-turn conversations.
+
+
+## [<b>Presentation Link</b>](https://docs.google.com/presentation/d/1hgF0VtZu6e_fghCubZ2naqFQU4lwMxvqUCLc8pkDaX8/edit?usp=sharing)
